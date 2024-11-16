@@ -18,19 +18,22 @@ class BigQueryHandler:
         sql: str,
         timeout: int = 30,
         job_config: bigquery.QueryJobConfig | None = None,
+        page_size: int | None = None
     ) -> QueryJob | str:
         try:
             query_job = self.client.query(sql, job_config=job_config)
-            return query_job.result(timeout=timeout)
+            return query_job.result(timeout=timeout, page_size=page_size)
         except Exception as error:
             logging.error(
                 f"Executing query: {sql}\n The error is: {error}", stack_info=True
             )
             raise error
 
-    def execute_query_to_df(self, sql: str, timeout: int = 30):
+    def execute_query_to_df(
+        self, sql: str, timeout: int = 30, job_config: bigquery.QueryJobConfig = None
+    ):
         try:
-            result = self.execute_query(sql, timeout)
+            result = self.execute_query(sql, timeout, job_config)
             return result.to_dataframe()
         except Exception as error:
             logging.error(
@@ -46,6 +49,7 @@ class BigQueryHandler:
         table_id,
         gcs_path,
         location="southamerica-west1",
+        format_table=bigquery.DestinationFormat.CSV,
         compression=bigquery.Compression.GZIP,
     ):
         """
@@ -68,7 +72,9 @@ class BigQueryHandler:
             table_ref = dataset_ref.table(table_id)
 
             # Job configuration
-            job_config = bigquery.job.ExtractJobConfig(compression=compression)
+            job_config = bigquery.ExtractJobConfig()
+            job_config.destination_format = format_table
+            job_config.compression = compression
 
             # API request to export table
             extract_job = self.client.extract_table(
@@ -76,12 +82,12 @@ class BigQueryHandler:
                 gcs_path,
                 location=location,
                 job_config=job_config,
-                timeout=1000,
+                timeout=10000
             )
-
+           
             # Wait for job completion
             result = extract_job.result()
-
+           
             return result
 
         except Exception as error:
@@ -124,12 +130,14 @@ class BigQueryHandler:
             ).to_dataframe()
 
             df = pl.from_pandas(results)
+            
             return df
         except Exception as error:
             logging.error(
                 f"Failed converting query result to polars dataframe: {sql}\n The error is: {error}",
                 stack_info=True,
             )
+            raise error
 
     def get_tables_name_with_regex(self, proyect_id, dataset_id, regex: re.Pattern):
         """
@@ -176,7 +184,7 @@ class BigQueryHandler:
                 tables_name,
             )
         end = time.time()
-        execution_time = round((end - start)/60)
+        execution_time = round(((end - start) / 60), 2)
         logging.info(
             f"The total time to load all tables to Google Cloud Storage (GCS) in parallel was: {execution_time}min"
         )
@@ -196,9 +204,11 @@ class BigQueryHandler:
             table = bigquery.Table(table_ref, schema=schema)
             table = self.client.create_table(table)
             logging.info(f"The table {table_ref} was created")
-       
+
         try:
             self.client.insert_rows_json(table_ref, [rows_to_insert])
         except Exception as error:
-            logging.error(f"There were errors inserting the data into the table {table_ref}. {error}")
-            raise Exception
+            logging.error(
+                f"There were errors inserting the data into the table {table_ref}. {error}"
+            )
+            raise error
