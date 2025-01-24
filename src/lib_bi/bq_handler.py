@@ -18,7 +18,7 @@ class BigQueryHandler:
         sql: str,
         timeout: int = 30,
         job_config: bigquery.QueryJobConfig | None = None,
-        page_size: int | None = None
+        page_size: int | None = None,
     ) -> QueryJob | str:
         try:
             query_job = self.client.query(sql, job_config=job_config)
@@ -41,6 +41,13 @@ class BigQueryHandler:
                 stack_info=True,
             )
             raise error
+
+    def execute_query_to_pl_df(self, sql: str) -> pl.DataFrame:
+        query_job = self.conn.query(sql)
+
+        result = query_job.result()
+
+        return pl.from_arrow(result.to_arrow())
 
     def export_table_to_storage(
         self,
@@ -82,12 +89,12 @@ class BigQueryHandler:
                 gcs_path,
                 location=location,
                 job_config=job_config,
-                timeout=10000
+                timeout=10000,
             )
-           
+
             # Wait for job completion
             result = extract_job.result()
-           
+
             return result
 
         except Exception as error:
@@ -130,7 +137,7 @@ class BigQueryHandler:
             ).to_dataframe()
 
             df = pl.from_pandas(results)
-            
+
             return df
         except Exception as error:
             logging.error(

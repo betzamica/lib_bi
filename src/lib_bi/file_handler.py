@@ -76,3 +76,15 @@ def get_all_sql_files(path_sql: str, remove_file: str = "") -> dict:
         sql_dict[sql_name] = sql
 
     return sql_dict
+
+def write_remove_empty_lines_in_txt(file_name: str) -> None:
+    # first get all lines from file
+    with open(file_name, "r") as f:
+        lines = f.readlines()
+
+    # remove spaces
+    lines = [line.replace(" ", "") for line in lines]
+
+    # finally, write lines in the file
+    with open(file_name, "w") as f:
+        f.writelines(lines)
