@@ -53,7 +53,7 @@ def concat_parquet_to_csv_gzip(
         end = time.time()
         execution_time = round((end - start) / 60, 2)
         logging.info(
-            f"The csv {csv_name_path.replace(f"{output_folder}/", "")} was compressed.Time: {execution_time}"
+            f"The csv {csv_name_path.replace(f'{output_folder}/', '')} was compressed.Time: {execution_time}"
         )
 
     logging.info("All the part tables were concatenated")
@@ -76,6 +76,20 @@ def get_all_sql_files(path_sql: str, remove_file: str = "") -> dict:
         sql_dict[sql_name] = sql
 
     return sql_dict
+
+
+def get_sql_files(path_sql: str, sql_name_list: list) -> dict:
+    sql_dict = {}
+
+    for sql_file in sql_name_list:
+        path = os.path.join(path_sql, sql_file)
+        with open(path, encoding="utf-8") as f:
+            sql = f.read()
+        sql_name = sql_file.replace(".sql", "")
+        sql_dict[sql_name] = sql
+
+    return sql_dict
+
 
 def write_remove_empty_lines_in_txt(file_name: str) -> None:
     # first get all lines from file
