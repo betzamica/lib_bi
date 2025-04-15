@@ -118,7 +118,7 @@ class SheetHandler:
 
     import polars as pl
 
-    def load(
+    def load_df_polars_to_sheet(
         self,
         df_sheet: pl.DataFrame,
     ) -> tuple[pl.DataFrame, pl.DataFrame]:
