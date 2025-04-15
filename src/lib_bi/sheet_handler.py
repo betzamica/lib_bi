@@ -5,6 +5,7 @@ import polars as pl
 import logging
 import gspread
 from datetime import datetime
+from gspread_dataframe import set_with_dataframe
 from google.oauth2 import service_account
 from googleapiclient.http import MediaIoBaseDownload
 from googleapiclient.discovery import build
@@ -114,3 +115,30 @@ class SheetHandler:
             logging.error(error)
 
         return df
+
+    import polars as pl
+
+    def load(
+        self,
+        df_sheet: pl.DataFrame,
+    ) -> tuple[pl.DataFrame, pl.DataFrame]:
+        try:
+            # Initialize Google Sheets handler
+            sheet_handler = SheetHandler()
+            sheet = sheet_handler.gc.open_by_key(os.environ["SHEET_ID"]).worksheet(
+                os.environ["SHEET_NAME"]
+            )
+            try:
+                sheet.clear()
+                print("Cleaned sheet.")
+                # Convert Polars DataFrame to Pandas DataFrame and write to Google Sheet
+                df_sheet_pandas = df_sheet.to_pandas()
+                set_with_dataframe(sheet, df_sheet_pandas)
+                print("DataFrame uploaded to sheet.")
+            except Exception as error:
+                print("Could not load DataFrame to sheet.")
+                raise error
+
+        except Exception as error:
+            print(f"An error occurred in the load function: {error}")
+            raise error
